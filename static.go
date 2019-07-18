@@ -167,56 +167,54 @@ func New(options ...Option) route.MiddlewareFunc {
 		panic(fmt.Sprintf("static: %v", err))
 	}
 
-	return func(next route.HandlerFunc) route.HandlerFunc {
-		return func(c route.Context) (err error) {
-			if opts.Skipper(c) {
-				return next(c)
-			}
+	return func(c route.Context, next route.HandlerFunc) (err error) {
+		if opts.Skipper(c) {
+			return next(c)
+		}
 
-			p := c.Request().URL.Path
-			if strings.HasSuffix(c.Path(), "*") { // When serving from a group, e.g. `/static*`.
-				p = c.Param("*")
-			}
-			p, err = url.PathUnescape(p)
-			if err != nil {
-				return
-			}
-			name := filepath.Join(opts.Root, path.Clean("/"+p)) // "/"+ for security
+		p := c.Request().URL.Path
+		if strings.HasSuffix(c.Path(), "*") { // When serving from a group, e.g. `/static*`.
+			p = c.Param("*")
+		}
+		p, err = url.PathUnescape(p)
+		if err != nil {
+			return
+		}
+		name := filepath.Join(opts.Root, path.Clean("/"+p)) // "/"+ for security
 
-			fi, err := os.Stat(name)
-			if err != nil {
-				if os.IsNotExist(err) {
-					if err = next(c); err != nil {
-						if he, ok := err.(*route.HTTPError); ok {
-							if opts.HTML5 && he.Code == http.StatusNotFound {
-								return c.File(filepath.Join(opts.Root, opts.Index))
-							}
+		fi, err := os.Stat(name)
+		if err != nil {
+			if os.IsNotExist(err) {
+				if err = next(c); err != nil {
+					if he, ok := err.(*route.HTTPError); ok {
+						if opts.HTML5 && he.Code == http.StatusNotFound {
+							return c.File(filepath.Join(opts.Root, opts.Index))
 						}
-						return
-					}
-				}
-				return
-			}
-
-			if fi.IsDir() {
-				index := filepath.Join(name, opts.Index)
-				fi, err = os.Stat(index)
-
-				if err != nil {
-					if opts.Browse {
-						return listDir(t, name, c.Response())
-					}
-					if os.IsNotExist(err) {
-						return next(c)
 					}
 					return
 				}
+			}
+			return
+		}
 
-				return c.File(index)
+		if fi.IsDir() {
+			index := filepath.Join(name, opts.Index)
+			fi, err = os.Stat(index)
+
+			if err != nil {
+				if opts.Browse {
+					return listDir(t, name, c.Response())
+				}
+				if os.IsNotExist(err) {
+					return next(c)
+				}
+				return
 			}
 
-			return c.File(name)
+			return c.File(index)
 		}
+
+		return c.File(name)
 	}
 }
 

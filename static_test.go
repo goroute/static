@@ -15,10 +15,10 @@ func TestStatic(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := mux.NewContext(req, rec)
 
-	h := New(Root("testdata"))(route.NotFoundHandler)
+	mw := New(Root("testdata"))
 
 	assert := assert.New(t)
-	if assert.NoError(h(c)) {
+	if assert.NoError(mw(c, route.NotFoundHandler)) {
 		assert.Contains(rec.Body.String(), "Route")
 	}
 }
@@ -29,13 +29,13 @@ func TestStaticFileFound(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := mux.NewContext(req, rec)
 
-	h := New(Root("testdata"))(route.NotFoundHandler)
+	mw := New(Root("testdata"))
 
 	assert := assert.New(t)
 	req = httptest.NewRequest(http.MethodGet, "/images/walle.png", nil)
 	rec = httptest.NewRecorder()
 	c = mux.NewContext(req, rec)
-	if assert.NoError(h(c)) {
+	if assert.NoError(mw(c, route.NotFoundHandler)) {
 		assert.Equal(http.StatusOK, rec.Code)
 		assert.Equal(rec.Header().Get(route.HeaderContentLength), "219885")
 	}
@@ -47,13 +47,13 @@ func TestStaticFileNotFound(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := mux.NewContext(req, rec)
 
-	h := New(Root("testdata"))(route.NotFoundHandler)
+	mw := New(Root("testdata"))
 
 	assert := assert.New(t)
 	req = httptest.NewRequest(http.MethodGet, "/none", nil)
 	rec = httptest.NewRecorder()
 	c = mux.NewContext(req, rec)
-	he := h(c).(*route.HTTPError)
+	he := mw(c, route.NotFoundHandler).(*route.HTTPError)
 	assert.Equal(http.StatusNotFound, he.Code)
 }
 
@@ -63,10 +63,10 @@ func TestStaticHTML5(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := mux.NewContext(req, rec)
 
-	h := New(Root("testdata"), HTML5(true))(route.NotFoundHandler)
+	mw := New(Root("testdata"), HTML5(true))
 
 	assert := assert.New(t)
-	if assert.NoError(h(c)) {
+	if assert.NoError(mw(c, route.NotFoundHandler)) {
 		assert.Equal(http.StatusOK, rec.Code)
 		assert.Contains(rec.Body.String(), "Route")
 	}
@@ -78,13 +78,13 @@ func TestStaticBrowse(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := mux.NewContext(req, rec)
 
-	h := New(
+	mw := New(
 		Root("testdata/browse"),
 		Browse(true),
-	)(route.NotFoundHandler)
+	)
 
 	assert := assert.New(t)
-	if assert.NoError(h(c)) {
+	if assert.NoError(mw(c, route.NotFoundHandler)) {
 		assert.Equal(http.StatusOK, rec.Code)
 		assert.Contains(rec.Body.String(), "Hello")
 	}
